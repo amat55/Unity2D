@@ -4,100 +4,91 @@ using UnityEngine;
 using UnityEngine.UI;
 public class PlayerController : MonoBehaviour
 {
-    //Start() Variables
+    //Start() variables
     private Rigidbody2D rb;
     private Animator anim;
     private Collider2D coll;
 
     //FSM
-    private enum State { idle,running,jumping,falling,hurt}
+    private enum State { idle, running, jumping, falling, hurt }
     private State state = State.idle;
 
-    //Inseptor variables
+    //Inspector variables
     [SerializeField] private LayerMask ground;
     [SerializeField] private float speed = 5f;
     [SerializeField] private float jumpForce = 10f;
     [SerializeField] private int cherries = 0;
-    [SerializeField] private Text CherryText;
+    [SerializeField] private Text cherryText;
     [SerializeField] private float hurtForce = 10f;
+
     private void Start()
     {
-        rb=GetComponent<Rigidbody2D>();
-        anim=GetComponent<Animator>();
+        rb = GetComponent<Rigidbody2D>();
+        anim = GetComponent<Animator>();
         coll = GetComponent<Collider2D>();
     }
-
     private void Update()
     {
         if (state != State.hurt)
         {
             Movement();
         }
-       
         AnimationState();
-        anim.SetInteger("state", (int)state);   //sets animation based on enumerator state
+        anim.SetInteger("state", (int)state); //sets animation based on Enumerator state
     }
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerEnter2D(Collider2D collision) //Trigger for Collectables
     {
-      if(other.tag=="collectable")
+        if (collision.tag == "collectable")
         {
-            Destroy(other.gameObject);
+            Destroy(collision.gameObject); //Cherry destroy
             cherries += 1;
-            CherryText.text = cherries.ToString();
+            cherryText.text = cherries.ToString(); //Converting number to string
         }
     }
-
-    private void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionEnter2D(Collision2D other)
     {
-        if (collision.gameObject.tag == "Enemy")
+        if (other.gameObject.tag == "Enemy")
         {
             if (state == State.falling)
             {
-                Destroy(collision.gameObject);
+                Destroy(other.gameObject);
                 Jump();
-            }
-           
-        }
-        else
-        {
-            state = State.hurt;
-           // print("this is happining ");
-            if (collision.gameObject.transform.position.x > transform.position.x)
-            {
-                rb.velocity = new Vector2(-hurtForce, rb.velocity.y);
-               // print("to my right");
             }
             else
             {
-                rb.velocity = new Vector2(hurtForce, rb.velocity.y);
-                //print("to my left");
+                state = State.hurt;
+                if (other.gameObject.transform.position.x > transform.position.x)
+                {
+                    //Enemy is to my right therefore should be damaged and move left
+                    rb.velocity = new Vector2(-hurtForce, rb.velocity.y);
+                }
+                else
+                {
+                    //Enemy is to my left therefore i Should be damaged and move right
+                    rb.velocity = new Vector2(hurtForce, rb.velocity.y);
+                }
             }
-        }
-        
-    }
 
+        }
+    }
     private void Movement()
     {
-        float _h = Input.GetAxis("Horizontal");
+        float hDirection = Input.GetAxis("Horizontal");
 
-        if (_h < 0)
+        //Moving left
+        if (hDirection < 0)
         {
             rb.velocity = new Vector2(-speed, rb.velocity.y);
             transform.localScale = new Vector2(-1, 1);
-            //anim.SetBool("running", true);
         }
-        else if (_h > 0)
+        //Moving right
+        else if (hDirection > 0)
         {
             rb.velocity = new Vector2(speed, rb.velocity.y);
             transform.localScale = new Vector2(1, 1);
-            //anim.SetBool("running", true);
         }
-        else
-        {
-            //anim.SetBool("running", false);
-
-        }
-        if (Input.GetButtonDown("Jump") && coll.IsTouchingLayers(ground))
+        //Jumping
+        if (Input.GetButtonDown("Jump") && coll.IsTouchingLayers())
         {
             Jump();
         }
@@ -107,7 +98,6 @@ public class PlayerController : MonoBehaviour
         rb.velocity = new Vector2(rb.velocity.x, jumpForce);
         state = State.jumping;
     }
-
     private void AnimationState()
     {
         if (state == State.jumping)
@@ -123,7 +113,6 @@ public class PlayerController : MonoBehaviour
             {
                 state = State.idle;
             }
-        
         }
         else if (state == State.hurt)
         {
@@ -132,8 +121,10 @@ public class PlayerController : MonoBehaviour
                 state = State.idle;
             }
         }
-         else if (Mathf.Abs(rb.velocity.x) > 2f)
+
+        else if (Mathf.Abs(rb.velocity.x) > 2f)
         {
+            //Moving
             state = State.running;
         }
         else
